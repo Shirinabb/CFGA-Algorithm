@@ -282,7 +282,8 @@ cplex = buildModelByColumn();
   
      static void usage() {
         System.out.println(" ");
-               System.out.println("options: -c  build model by column");
+        System.out.println("usage: java Diet [options] <data file>");
+        System.out.println("options: -c  build model by column");
         System.out.println("         -i  use integer variables");
         System.out.println(" ");
      }

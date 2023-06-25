@@ -1,1 +1,1 @@
-these methods are used for CFTGA Algorithm based on paper Pseudocode
+these methods are used for FTGA Algorithm based on paper Pseudocode

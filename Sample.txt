@@ -1,0 +1,183 @@
+import java.util.*;
+
+class Node {
+    int id;
+    double capacity;
+    double energy;
+    boolean active;
+
+    public Node(int id, double capacity, double energy) {
+        this.id = id;
+        this.capacity = capacity;
+        this.energy = energy;
+        this.active = true;
+    }
+
+    public void updateStatus() {
+        if (this.energy <= 0 || this.capacity <= 0) {
+            this.active = false;
+        }
+    }
+}
+
+class Service {
+    int id;
+    double requiredCapacity;
+    double requiredEnergy;
+
+    public Service(int id, double requiredCapacity, double requiredEnergy) {
+        this.id = id;
+        this.requiredCapacity = requiredCapacity;
+        this.requiredEnergy = requiredEnergy;
+    }
+}
+
+class Chromosome {
+    List<Node> nodes;
+    double fitness;
+
+    public Chromosome(List<Node> nodes) {
+        this.nodes = new ArrayList<>(nodes);
+        this.fitness = 0.0;
+    }
+
+    public void calculateFitness(Service service) {
+        double cost = 0.0;
+        for (Node node : nodes) {
+            if (node.active) {
+                cost += (node.energy / node.capacity);
+            }
+        }
+        this.fitness = 1 / (1 + cost); // Minimize cost
+    }
+}
+
+public class FTGA {
+
+    private List<Node> nodes;
+    private List<Service> services;
+    private List<Chromosome> population;
+    private final int populationSize = 50;
+    private final double crossoverRate = 0.8;
+    private final double mutationRate = 0.2;
+    private final int maxGenerations = 100;
+
+    public FTGA(List<Node> nodes, List<Service> services) {
+        this.nodes = nodes;
+        this.services = services;
+        this.population = new ArrayList<>();
+    }
+
+    public void initializePopulation() {
+        Random random = new Random();
+        for (int i = 0; i < populationSize; i++) {
+            List<Node> chromosomeNodes = new ArrayList<>();
+            for (Node node : nodes) {
+                if (random.nextBoolean()) {
+                    chromosomeNodes.add(node);
+                }
+            }
+            Chromosome chromosome = new Chromosome(chromosomeNodes);
+            population.add(chromosome);
+        }
+    }
+
+    public Chromosome selectParent() {
+        Random random = new Random();
+        Chromosome best = null;
+        for (int i = 0; i < 5; i++) { // Tournament size
+            Chromosome candidate = population.get(random.nextInt(population.size()));
+            if (best == null || candidate.fitness > best.fitness) {
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    public List<Chromosome> crossover(Chromosome parent1, Chromosome parent2) {
+        Random random = new Random();
+        if (random.nextDouble() > crossoverRate) {
+            return Arrays.asList(parent1, parent2);
+        }
+
+        Set<Node> offspring1Nodes = new HashSet<>(parent1.nodes);
+        Set<Node> offspring2Nodes = new HashSet<>(parent2.nodes);
+
+        for (Node node : parent2.nodes) {
+            if (!offspring1Nodes.contains(node) && random.nextBoolean()) {
+                offspring1Nodes.add(node);
+            }
+        }
+
+        for (Node node : parent1.nodes) {
+            if (!offspring2Nodes.contains(node) && random.nextBoolean()) {
+                offspring2Nodes.add(node);
+            }
+        }
+
+        return Arrays.asList(
+            new Chromosome(new ArrayList<>(offspring1Nodes)),
+            new Chromosome(new ArrayList<>(offspring2Nodes))
+        );
+    }
+
+    public void mutate(Chromosome chromosome) {
+        Random random = new Random();
+        if (random.nextDouble() > mutationRate) {
+            return;
+        }
+
+        Node node = nodes.get(random.nextInt(nodes.size()));
+        if (chromosome.nodes.contains(node)) {
+            chromosome.nodes.remove(node);
+        } else {
+            chromosome.nodes.add(node);
+        }
+    }
+
+    public void evolve() {
+        for (int generation = 0; generation < maxGenerations; generation++) {
+            List<Chromosome> newPopulation = new ArrayList<>();
+            for (int i = 0; i < populationSize / 2; i++) {
+                Chromosome parent1 = selectParent();
+                Chromosome parent2 = selectParent();
+                List<Chromosome> offspring = crossover(parent1, parent2);
+                mutate(offspring.get(0));
+                mutate(offspring.get(1));
+                newPopulation.add(offspring.get(0));
+                newPopulation.add(offspring.get(1));
+            }
+
+            // Calculate fitness for the new population
+            for (Chromosome chromosome : newPopulation) {
+                for (Service service : services) {
+                    chromosome.calculateFitness(service);
+                }
+            }
+
+            population = newPopulation;
+        }
+    }
+
+    public static void main(String[] args) {
+        // Example nodes
+        List<Node> nodes = Arrays.asList(
+            new Node(1, 100, 500),
+            new Node(2, 80, 400),
+            new Node(3, 120, 600),
+            new Node(4, 90, 450)
+        );
+
+        // Example services
+        List<Service> services = Arrays.asList(
+            new Service(1, 50, 200),
+            new Service(2, 60, 250)
+        );
+
+        FTGA ftga = new FTGA(nodes, services);
+        ftga.initializePopulation();
+        ftga.evolve();
+
+        System.out.println("Evolution completed.");
+    }
+}
